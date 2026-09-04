@@ -38,20 +38,66 @@ PostgreSQL is available on `localhost:5432` by default. Override `POSTGRES_PORT`
 
 ## GitHub Container Registry and Portainer
 
-Every push to `main` builds the collector for AMD64 and ARM64 and publishes these private GHCR tags:
+Every push to `main` builds the collector for AMD64 and ARM64 and publishes these public GHCR tags:
 
 - `ghcr.io/dunkstormen/vatsim-data-collector:latest`
 - `ghcr.io/dunkstormen/vatsim-data-collector:sha-<commit>`
 - Version tags such as `1.0.0` when a Git tag such as `v1.0.0` is pushed.
 
-To deploy from a private GitHub repository in Portainer:
+To deploy in Portainer:
 
-1. Add `ghcr.io` as a Portainer registry using GitHub username `Dunkstormen` and a fine-grained or classic personal access token that can read packages.
-2. Create a Git-based stack using `docker-compose.portainer.yml` as the compose path.
-3. Configure at least `POSTGRES_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` in the stack environment. Use long, distinct values.
-4. Deploy after the GitHub Actions **Publish collector image** workflow has completed.
+1. Create a Git-based stack from `https://github.com/Dunkstormen/vatsim-data-collector.git` using `docker-compose.portainer.yml` as the compose path.
+2. Configure at least `POSTGRES_PASSWORD` and `GRAFANA_ADMIN_PASSWORD` in the stack environment. Use long, distinct values.
+3. Deploy after the GitHub Actions **Publish collector image** workflow has completed.
+
+The repository and image are public, so Portainer does not need GitHub or GHCR credentials.
 
 The production compose file does not expose PostgreSQL publicly. Pin `COLLECTOR_TAG` to a version or `sha-...` tag when deterministic deployments are preferred over `latest`.
+
+## Deploy with Podman
+
+Podman Compose delegates to an installed Compose provider. Confirm both Podman and a provider are available:
+
+```bash
+podman --version
+podman compose version
+```
+
+Clone and configure the stack as the unprivileged user that will own it:
+
+```bash
+git clone https://github.com/Dunkstormen/vatsim-data-collector.git
+cd vatsim-data-collector
+cp .env.example .env
+chmod 600 .env
+```
+
+Edit `.env` and set long, distinct values for `POSTGRES_PASSWORD` and `GRAFANA_ADMIN_PASSWORD`. Then pull and start the public images:
+
+```bash
+podman compose -f docker-compose.portainer.yml pull
+podman compose -f docker-compose.portainer.yml up -d
+podman compose -f docker-compose.portainer.yml ps
+podman compose -f docker-compose.portainer.yml logs -f collector
+```
+
+Grafana is available at `http://<server-address>:3000`. The compose bind mounts include private SELinux relabeling (`:Z`) for Fedora, RHEL, and other SELinux-enabled hosts. Named volumes preserve PostgreSQL and Grafana data across container replacement.
+
+To update later:
+
+```bash
+git pull --ff-only
+podman compose -f docker-compose.portainer.yml pull
+podman compose -f docker-compose.portainer.yml up -d
+```
+
+To stop without deleting stored data:
+
+```bash
+podman compose -f docker-compose.portainer.yml down
+```
+
+Do not add `--volumes` unless you deliberately want to delete the database and Grafana volumes. For a rootless deployment that must start before login and survive logout, enable lingering for the service account and manage the workload with user systemd/Quadlet according to your distribution's Podman version.
 
 ## Useful queries
 
