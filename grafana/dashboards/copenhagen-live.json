@@ -1,0 +1,107 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Departures\" FROM (SELECT DISTINCT cid, callsign, logon_time FROM pilots WHERE departure = 'EKCH' AND $__timeFilter(captured_at)) flights", "refId": "A"}],
+      "title": "Accumulated departures",
+      "description": "Distinct EKCH departure flight sessions observed in the selected time range.",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Arrivals\" FROM (SELECT DISTINCT cid, callsign, logon_time FROM pilots WHERE arrival = 'EKCH' AND $__timeFilter(captured_at)) flights", "refId": "A"}],
+      "title": "Accumulated arrivals",
+      "description": "Distinct EKCH arrival flight sessions observed in the selected time range.",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "light-blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "light-blue", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT count(*) AS \"Outbound\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND departure = 'EKCH'", "refId": "A"}],
+      "title": "Current EKCH departures online",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "semi-dark-green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "semi-dark-green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT count(*) AS \"Inbound\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND arrival = 'EKCH'", "refId": "A"}],
+      "title": "Current EKCH arrivals online",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "Flights", "axisPlacement": "auto", "drawStyle": "bars", "fillOpacity": 45, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 16, "x": 0, "y": 4},
+      "id": 5,
+      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "WITH flights AS (SELECT min(captured_at) AS first_seen, 'Departures' AS direction FROM pilots WHERE departure = 'EKCH' AND $__timeFilter(captured_at) GROUP BY cid, callsign, logon_time UNION ALL SELECT min(captured_at) AS first_seen, 'Arrivals' AS direction FROM pilots WHERE arrival = 'EKCH' AND $__timeFilter(captured_at) GROUP BY cid, callsign, logon_time) SELECT $__timeGroupAlias(first_seen, $__interval), direction AS metric, count(*)::double precision AS value FROM flights GROUP BY 1, 2 ORDER BY 1", "refId": "A"}
+      ],
+      "title": "First observed flight sessions",
+      "description": "Distinct flight sessions first observed in each interval within the selected dashboard range.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "Flights", "axisPlacement": "auto", "fillOpacity": 70, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineWidth": 1, "scaleDistribution": {"type": "linear"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 4},
+      "id": 6,
+      "options": {"barRadius": 0, "barWidth": 0.8, "fullHighlight": false, "groupWidth": 0.7, "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false}, "orientation": "horizontal", "showValue": "always", "stacking": "none", "tooltip": {"mode": "single", "sort": "none"}, "xTickLabelRotation": 0, "xTickLabelSpacing": 0},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(NULLIF(arrival, ''), 'Unknown') AS \"Destination\", count(*) AS \"Flights\" FROM (SELECT DISTINCT cid, callsign, logon_time, arrival FROM pilots WHERE departure = 'EKCH' AND $__timeFilter(captured_at)) flights GROUP BY 1 ORDER BY 2 DESC LIMIT 10", "refId": "A"}],
+      "title": "Top departure destinations",
+      "type": "barchart"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 12},
+      "id": 7,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT callsign AS \"Callsign\", departure AS \"From\", aircraft_short AS \"Aircraft\", altitude AS \"Altitude\", groundspeed AS \"GS\", data->'flight_plan'->>'route' AS \"Route\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND arrival = 'EKCH' ORDER BY altitude ASC NULLS LAST", "refId": "A"}],
+      "title": "Current inbound flights",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 12},
+      "id": 8,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1), positions AS (SELECT callsign, name, frequency, 'Controller' AS kind FROM controllers WHERE snapshot_id = (SELECT id FROM latest) AND callsign ~ '^(EKCH|EKDK)_' UNION ALL SELECT callsign, name, frequency, 'ATIS' AS kind FROM atis WHERE snapshot_id = (SELECT id FROM latest) AND callsign LIKE 'EKCH_%') SELECT kind AS \"Type\", callsign AS \"Callsign\", name AS \"Name\", frequency AS \"Frequency\" FROM positions ORDER BY kind, callsign", "refId": "A"}],
+      "title": "Copenhagen ATC and ATIS online",
+      "type": "table"
+    }
+  ],
+  "refresh": "15s",
+  "schemaVersion": 40,
+  "tags": ["vatsim", "copenhagen", "ekch"],
+  "templating": {"list": []},
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Copenhagen Live",
+  "uid": "copenhagen-live",
+  "version": 1,
+  "weekStart": "monday"
+}

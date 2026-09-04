@@ -6,7 +6,7 @@ A Docker Compose stack that reads the public VATSIM Data API v3 feed every 15 se
 
 - `collector`: a small Python process with retry-safe, transactional ingestion.
 - `postgres`: durable snapshot, pilot, controller, ATIS, and collector-event storage.
-- `grafana`: a preconfigured PostgreSQL datasource and **VATSIM Network Overview** dashboard.
+- `grafana`: a preconfigured PostgreSQL datasource plus **VATSIM Network Overview** and **Copenhagen Live** dashboards.
 
 Every distinct feed update is stored in both forms:
 
@@ -32,7 +32,7 @@ This supports exact replay/export of a historical feed while keeping Grafana and
    docker compose logs -f collector
    ```
 
-4. Open [Grafana](http://localhost:3000), sign in with the credentials from `.env`, and open **Dashboards → VATSIM → VATSIM Network Overview**.
+4. Open [Grafana](http://localhost:3000), sign in with the credentials from `.env`, and open the provisioned **VATSIM Network Overview** or **Copenhagen Live** dashboard under **Dashboards → VATSIM**.
 
 PostgreSQL is available on `localhost:5432` by default. Override `POSTGRES_PORT` or `GRAFANA_PORT` in `.env` if those ports are occupied.
 
