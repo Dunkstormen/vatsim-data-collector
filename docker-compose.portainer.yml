@@ -1,0 +1,61 @@
+name: vatsim-data-collector
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vatsim}
+      POSTGRES_USER: ${POSTGRES_USER:-vatsim}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Portainer}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  collector:
+    image: ghcr.io/dunkstormen/vatsim-data-collector:${COLLECTOR_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vatsim}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vatsim}
+      VATSIM_FEED_URL: https://data.vatsim.net/v3/vatsim-data.json
+      COLLECT_INTERVAL_SECONDS: ${COLLECT_INTERVAL_SECONDS:-15}
+      REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-10}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      HEALTH_FILE: /tmp/collector-healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,time; p='/tmp/collector-healthy'; assert os.path.exists(p) and time.time()-os.path.getmtime(p)<90"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in Portainer}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      POSTGRES_DB: ${POSTGRES_DB:-vatsim}
+      POSTGRES_USER: ${POSTGRES_USER:-vatsim}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  grafana-data:
