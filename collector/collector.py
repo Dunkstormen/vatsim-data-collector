@@ -29,11 +29,15 @@ logging.basicConfig(
 log = logging.getLogger("vatsim-collector")
 stopping = False
 
-EKCH_LATITUDE = 55.6181
-EKCH_LONGITUDE = 12.6561
+AIRPORTS = {
+    "EKCH": {"latitude": 55.6181, "longitude": 12.6561, "elevation_ft": 17},
+    "EKYT": {"latitude": 57.0928, "longitude": 9.8492, "elevation_ft": 10},
+    "EKBI": {"latitude": 55.7403, "longitude": 9.1518, "elevation_ft": 247},
+    "EKAH": {"latitude": 56.3000, "longitude": 10.6190, "elevation_ft": 82},
+}
 GROUND_RADIUS_NM = 4.0
 AIRBORNE_RADIUS_NM = 12.0
-GROUND_MAX_ALTITUDE_FT = 350
+GROUND_ALTITUDE_MARGIN_FT = 300
 GROUND_MAX_SPEED_KT = 60
 AIRBORNE_MIN_ALTITUDE_FT = 450
 AIRBORNE_MIN_SPEED_KT = 80
@@ -50,21 +54,23 @@ def parse_timestamp(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def distance_nm(latitude: float, longitude: float) -> float:
+def distance_nm(airport: str, latitude: float, longitude: float) -> float:
     earth_radius_nm = 3440.065
-    lat1 = math.radians(EKCH_LATITUDE)
+    reference = AIRPORTS[airport]
+    lat1 = math.radians(reference["latitude"])
     lat2 = math.radians(latitude)
     delta_lat = lat2 - lat1
-    delta_lon = math.radians(longitude - EKCH_LONGITUDE)
+    delta_lon = math.radians(longitude - reference["longitude"])
     a = math.sin(delta_lat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2
     return earth_radius_nm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def movement_state(latitude: float | None, longitude: float | None, altitude: int | None, groundspeed: int | None) -> str:
+def movement_state(airport: str, latitude: float | None, longitude: float | None, altitude: int | None, groundspeed: int | None) -> str:
     if latitude is None or longitude is None or altitude is None or groundspeed is None:
         return "other"
-    radius = distance_nm(latitude, longitude)
-    if radius <= GROUND_RADIUS_NM and altitude <= GROUND_MAX_ALTITUDE_FT and groundspeed <= GROUND_MAX_SPEED_KT:
+    radius = distance_nm(airport, latitude, longitude)
+    ground_ceiling = AIRPORTS[airport]["elevation_ft"] + GROUND_ALTITUDE_MARGIN_FT
+    if radius <= GROUND_RADIUS_NM and altitude <= ground_ceiling and groundspeed <= GROUND_MAX_SPEED_KT:
         return "ground"
     if radius <= AIRBORNE_RADIUS_NM and (altitude >= AIRBORNE_MIN_ALTITUDE_FT or groundspeed >= AIRBORNE_MIN_SPEED_KT):
         return "airborne_near"
@@ -83,6 +89,7 @@ def ensure_schema(connection: psycopg.Connection[Any]) -> None:
             cid BIGINT NOT NULL,
             callsign TEXT NOT NULL,
             logon_time TIMESTAMPTZ NOT NULL,
+            pilot_name TEXT,
             aircraft_short TEXT,
             origin TEXT,
             destination TEXT,
@@ -95,6 +102,7 @@ def ensure_schema(connection: psycopg.Connection[Any]) -> None:
         );
         CREATE INDEX IF NOT EXISTS flight_events_airport_time_idx
             ON flight_events (airport, event_type, event_at DESC);
+        ALTER TABLE flight_events ADD COLUMN IF NOT EXISTS pilot_name TEXT;
         """
     )
     connection.commit()
@@ -149,9 +157,9 @@ def detect_movement_events(
         """
         SELECT cid, callsign, logon_time, latitude, longitude, altitude, groundspeed
         FROM pilots
-        WHERE snapshot_id = %s AND (departure = 'EKCH' OR arrival = 'EKCH')
+        WHERE snapshot_id = %s AND (departure = ANY(%s) OR arrival = ANY(%s))
         """,
-        (previous_snapshot_id,),
+        (previous_snapshot_id, list(AIRPORTS), list(AIRPORTS)),
     )
     previous = {(row[0], row[1], row[2]): row[3:] for row in cursor.fetchall()}
     detected = 0
@@ -159,7 +167,8 @@ def detect_movement_events(
         flight_plan = item.get("flight_plan") or {}
         origin = flight_plan.get("departure")
         destination = flight_plan.get("arrival")
-        if origin != "EKCH" and destination != "EKCH":
+        relevant_airports = {airport for airport in (origin, destination) if airport in AIRPORTS}
+        if not relevant_airports:
             continue
         logon_time = parse_timestamp(item.get("logon_time"))
         if logon_time is None:
@@ -168,48 +177,50 @@ def detect_movement_events(
         prior = previous.get(key)
         if prior is None:
             continue
-        prior_state = movement_state(prior[0], prior[1], prior[2], prior[3])
-        current_state = movement_state(
-            item.get("latitude"), item.get("longitude"), item.get("altitude"), item.get("groundspeed")
-        )
-        event_type = None
-        if origin == "EKCH" and prior_state == "ground" and current_state == "airborne_near":
-            event_type = "departure"
-        elif destination == "EKCH" and prior_state == "airborne_near" and current_state == "ground":
-            event_type = "arrival"
-        if event_type is None:
-            continue
-        radius = distance_nm(item["latitude"], item["longitude"])
-        cursor.execute(
-            """
-            INSERT INTO flight_events (
-                event_at, snapshot_id, airport, event_type, cid, callsign, logon_time,
-                aircraft_short, origin, destination, latitude, longitude, altitude,
-                groundspeed, detection
-            ) VALUES (%s, %s, 'EKCH', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (airport, event_type, cid, callsign, logon_time) DO NOTHING
-            """,
-            (
-                captured_at, snapshot_id, event_type, item["cid"], item["callsign"], logon_time,
-                flight_plan.get("aircraft_short"), origin, destination, item["latitude"],
-                item["longitude"], item["altitude"], item["groundspeed"],
-                Jsonb({
-                    "method": "consecutive_snapshot_state_transition_v1",
-                    "previous_state": prior_state,
-                    "current_state": current_state,
-                    "distance_nm": round(radius, 3),
-                    "thresholds": {
-                        "ground_radius_nm": GROUND_RADIUS_NM,
-                        "airborne_radius_nm": AIRBORNE_RADIUS_NM,
-                        "ground_max_altitude_ft": GROUND_MAX_ALTITUDE_FT,
-                        "ground_max_speed_kt": GROUND_MAX_SPEED_KT,
-                        "airborne_min_altitude_ft": AIRBORNE_MIN_ALTITUDE_FT,
-                        "airborne_min_speed_kt": AIRBORNE_MIN_SPEED_KT,
-                    },
-                }),
-            ),
-        )
-        detected += cursor.rowcount
+        for airport in relevant_airports:
+            prior_state = movement_state(airport, prior[0], prior[1], prior[2], prior[3])
+            current_state = movement_state(
+                airport, item.get("latitude"), item.get("longitude"), item.get("altitude"), item.get("groundspeed")
+            )
+            event_type = None
+            if origin == airport and prior_state == "ground" and current_state == "airborne_near":
+                event_type = "departure"
+            elif destination == airport and prior_state == "airborne_near" and current_state == "ground":
+                event_type = "arrival"
+            if event_type is None:
+                continue
+            radius = distance_nm(airport, item["latitude"], item["longitude"])
+            cursor.execute(
+                """
+                INSERT INTO flight_events (
+                    event_at, snapshot_id, airport, event_type, cid, callsign, logon_time,
+                    pilot_name, aircraft_short, origin, destination, latitude, longitude, altitude,
+                    groundspeed, detection
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (airport, event_type, cid, callsign, logon_time) DO NOTHING
+                """,
+                (
+                    captured_at, snapshot_id, airport, event_type, item["cid"], item["callsign"], logon_time,
+                    item.get("name"), flight_plan.get("aircraft_short"), origin, destination, item["latitude"],
+                    item["longitude"], item["altitude"], item["groundspeed"],
+                    Jsonb({
+                        "method": "consecutive_snapshot_state_transition_v1",
+                        "previous_state": prior_state,
+                        "current_state": current_state,
+                        "distance_nm": round(radius, 3),
+                        "thresholds": {
+                            "ground_radius_nm": GROUND_RADIUS_NM,
+                            "airborne_radius_nm": AIRBORNE_RADIUS_NM,
+                            "airport_elevation_ft": AIRPORTS[airport]["elevation_ft"],
+                            "ground_altitude_margin_ft": GROUND_ALTITUDE_MARGIN_FT,
+                            "ground_max_speed_kt": GROUND_MAX_SPEED_KT,
+                            "airborne_min_altitude_ft": AIRBORNE_MIN_ALTITUDE_FT,
+                            "airborne_min_speed_kt": AIRBORNE_MIN_SPEED_KT,
+                        },
+                    }),
+                ),
+            )
+            detected += cursor.rowcount
     return detected
 
 
@@ -261,7 +272,7 @@ def save_snapshot(connection: psycopg.Connection[Any], feed: dict[str, Any]) -> 
             cursor, previous_snapshot_id, snapshot_id, captured_at, pilots
         )
         if movement_count:
-            log.info("detected %d EKCH movement event(s)", movement_count)
+            log.info("detected %d competition-airport movement event(s)", movement_count)
     return True
 
 

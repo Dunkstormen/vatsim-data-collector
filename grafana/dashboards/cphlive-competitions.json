@@ -1,0 +1,67 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [{"title": "Competition rules", "type": "link", "url": "https://cphlive.vatsim-scandinavia.org/#competitions", "targetBlank": true}],
+  "panels": [
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "description": "Pilots with at least one detected arrival and departure at EKCH between 04:00Z and 08:00Z.",
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "orange"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "orange", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}, "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH p AS (SELECT cid, count(*) FILTER (WHERE event_type='arrival') AS arrivals, count(*) FILTER (WHERE event_type='departure') AS departures FROM flight_events WHERE airport='EKCH' AND event_at >= '2026-09-05T04:00:00Z' AND event_at < '2026-09-05T08:00:00Z' GROUP BY cid) SELECT count(*) AS \"Eligible pilots\" FROM p WHERE LEAST(arrivals, departures) >= 1", "refId": "A"}],
+      "title": "Early Bird eligible", "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "description": "Pilots with at least one detected arrival and departure at EKCH between 19:00Z and 22:00Z.",
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "purple"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "purple", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}, "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH p AS (SELECT cid, count(*) FILTER (WHERE event_type='arrival') AS arrivals, count(*) FILTER (WHERE event_type='departure') AS departures FROM flight_events WHERE airport='EKCH' AND event_at >= '2026-09-05T19:00:00Z' AND event_at < '2026-09-05T22:00:00Z' GROUP BY cid) SELECT count(*) AS \"Eligible pilots\" FROM p WHERE LEAST(arrivals, departures) >= 1", "refId": "A"}],
+      "title": "Late Night Owl eligible", "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "description": "Pilots with at least four detected arrivals and four departures at EKCH during the event.",
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}, "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH p AS (SELECT cid, count(*) FILTER (WHERE event_type='arrival') AS arrivals, count(*) FILTER (WHERE event_type='departure') AS departures FROM flight_events WHERE airport='EKCH' AND event_at >= '2026-09-05T04:00:00Z' AND event_at < '2026-09-05T22:00:00Z' GROUP BY cid) SELECT count(*) AS \"Eligible pilots\" FROM p WHERE LEAST(arrivals, departures) >= 4", "refId": "A"}],
+      "title": "Copenhagen Fanatic eligible", "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "description": "Pilots with at least one detected arrival and departure at EKYT, EKBI, or EKAH during the event.",
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}, "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH p AS (SELECT cid, airport, count(*) FILTER (WHERE event_type='arrival') AS arrivals, count(*) FILTER (WHERE event_type='departure') AS departures FROM flight_events WHERE airport IN ('EKYT','EKBI','EKAH') AND event_at >= '2026-09-05T04:00:00Z' AND event_at < '2026-09-05T22:00:00Z' GROUP BY cid, airport) SELECT count(DISTINCT cid) AS \"Eligible pilots\" FROM p WHERE LEAST(arrivals, departures) >= 1", "refId": "A"}],
+      "title": "Regional Master eligible", "type": "stat"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 12, "w": 24, "x": 0, "y": 4}, "id": 5,
+      "options": {"cellHeight": "sm", "footer": {"countRows": true, "fields": "", "reducer": ["count"], "show": true}, "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH e AS (SELECT * FROM flight_events WHERE event_at >= '2026-09-05T04:00:00Z' AND event_at < '2026-09-05T22:00:00Z'), cph AS (SELECT cid, max(pilot_name) AS pilot_name, count(*) FILTER (WHERE event_type='arrival') AS arrivals, count(*) FILTER (WHERE event_type='departure') AS departures, count(*) FILTER (WHERE event_type='arrival' AND event_at < '2026-09-05T08:00:00Z') AS early_arrivals, count(*) FILTER (WHERE event_type='departure' AND event_at < '2026-09-05T08:00:00Z') AS early_departures, count(*) FILTER (WHERE event_type='arrival' AND event_at >= '2026-09-05T19:00:00Z') AS late_arrivals, count(*) FILTER (WHERE event_type='departure' AND event_at >= '2026-09-05T19:00:00Z') AS late_departures FROM e WHERE airport='EKCH' GROUP BY cid), regional AS (SELECT cid, max(rotations) AS rotations FROM (SELECT cid, airport, LEAST(count(*) FILTER (WHERE event_type='arrival'), count(*) FILTER (WHERE event_type='departure')) AS rotations FROM e WHERE airport IN ('EKYT','EKBI','EKAH') GROUP BY cid, airport) r GROUP BY cid), pilots AS (SELECT cid FROM cph UNION SELECT cid FROM regional) SELECT p.cid AS \"CID\", COALESCE(c.pilot_name, (SELECT max(pilot_name) FROM e WHERE cid=p.cid)) AS \"Pilot\", LEAST(COALESCE(c.early_arrivals,0),COALESCE(c.early_departures,0)) AS \"Early rotations\", LEAST(COALESCE(c.late_arrivals,0),COALESCE(c.late_departures,0)) AS \"Late rotations\", LEAST(COALESCE(c.arrivals,0),COALESCE(c.departures,0)) AS \"CPH rotations\", COALESCE(r.rotations,0) AS \"Regional rotations\", concat_ws(', ', CASE WHEN LEAST(COALESCE(c.early_arrivals,0),COALESCE(c.early_departures,0))>=1 THEN 'Early Bird' END, CASE WHEN LEAST(COALESCE(c.late_arrivals,0),COALESCE(c.late_departures,0))>=1 THEN 'Late Night Owl' END, CASE WHEN LEAST(COALESCE(c.arrivals,0),COALESCE(c.departures,0))>=4 THEN 'Copenhagen Fanatic' END, CASE WHEN COALESCE(r.rotations,0)>=1 THEN 'Regional Master' END) AS \"Eligible for\" FROM pilots p LEFT JOIN cph c USING(cid) LEFT JOIN regional r USING(cid) ORDER BY \"CPH rotations\" DESC, \"Regional rotations\" DESC, \"Pilot\"", "refId": "A"}],
+      "title": "Pilot competition progress", "type": "table"
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 16}, "id": 6,
+      "options": {"cellHeight": "sm", "showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT event_at AS \"Time\", airport AS \"Airport\", initcap(event_type) AS \"Movement\", cid AS \"CID\", pilot_name AS \"Pilot\", callsign AS \"Callsign\", origin AS \"From\", destination AS \"To\" FROM flight_events WHERE airport IN ('EKCH','EKYT','EKBI','EKAH') AND event_at >= '2026-09-05T04:00:00Z' AND event_at < '2026-09-05T22:00:00Z' ORDER BY event_at DESC", "refId": "A"}],
+      "title": "Detected competition movements", "type": "table"
+    }
+  ],
+  "refresh": "15s", "schemaVersion": 40,
+  "tags": ["vatsim", "cphlive", "competitions"],
+  "templating": {"list": []},
+  "time": {"from": "2026-09-05T04:00:00Z", "to": "2026-09-05T22:00:00Z"},
+  "timepicker": {}, "timezone": "utc", "title": "CPH Live Competition Tracker",
+  "uid": "cphlive-competitions", "version": 1, "weekStart": "monday"
+}

@@ -23,6 +23,7 @@ def test_controller_and_atis_rows_accept_minimum_fields():
 
 
 def test_ekch_movement_states():
-    assert movement_state(55.6181, 12.6561, 25, 12) == "ground"
-    assert movement_state(55.63, 12.70, 1200, 160) == "airborne_near"
-    assert movement_state(56.0, 13.0, 1200, 160) == "other"
+    assert movement_state("EKCH", 55.6181, 12.6561, 25, 12) == "ground"
+    assert movement_state("EKCH", 55.63, 12.70, 1200, 160) == "airborne_near"
+    assert movement_state("EKCH", 56.0, 13.0, 1200, 160) == "other"
+    assert movement_state("EKBI", 55.7403, 9.1518, 250, 5) == "ground"

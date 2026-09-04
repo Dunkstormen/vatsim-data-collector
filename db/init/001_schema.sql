@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS flight_events (
     cid BIGINT NOT NULL,
     callsign TEXT NOT NULL,
     logon_time TIMESTAMPTZ NOT NULL,
+    pilot_name TEXT,
     aircraft_short TEXT,
     origin TEXT,
     destination TEXT,

@@ -6,7 +6,7 @@ A Docker Compose stack that reads the public VATSIM Data API v3 feed every 15 se
 
 - `collector`: a small Python process with retry-safe, transactional ingestion.
 - `postgres`: durable snapshot, pilot, controller, ATIS, and collector-event storage.
-- `grafana`: a preconfigured PostgreSQL datasource plus **VATSIM Network Overview** and **Copenhagen Live** dashboards.
+- `grafana`: a preconfigured PostgreSQL datasource plus **VATSIM Network Overview**, **Copenhagen Live**, and **CPH Live Competition Tracker** dashboards.
 
 Every distinct feed update is stored in both forms:
 
