@@ -63,13 +63,20 @@ event was recorded, not necessarily that collection had uninterrupted coverage.
 The charts use existing `flight_events`; this dashboard update does not backfill
 movement events from older raw snapshots.
 
-The heatmap replaces the busiest-periods table. It contains a complete
-Monday–Sunday by 00–23 UTC grid. Each half's intensity shows the number of detected
+The heatmap replaces the busiest-periods table. It shows only the **actual UTC
+dates** within the selection, with **15-minute intervals** across each row. A
+single-date event has one row; dates are never combined by weekday. For example,
+5 September 04:00–22:00 UTC shows one row of 72 quarter-hour cells, not a full week.
+The columns cover only clock intervals present in the selected range. Each
+half's intensity shows the number of detected
 movements, with one shared scale for both directions; hover for exact counts.
-Its totals reconcile with the accumulated stat panels. Multiple occurrences of
-the same weekday/hour in a longer selection are **summed**, not averaged. Quiet
-elapsed hours show zero; grey cells are outside the selection and outlined cells
-have not elapsed yet. Partial hours include only events inside the selection.
+Its totals reconcile with the accumulated stat panels. Quiet elapsed intervals
+show zero; outlined cells have not elapsed yet. Selections crossing midnight can
+have grey alignment gaps outside the selection on their first/last date rows.
+Partial intervals include only events inside the selection, and tooltips show
+their exact clipped times. The bottom slider zooms into small cells; selections
+longer than three dates also have a vertical date slider. Zoom is retained across
+refreshes while the selected date/time axes remain unchanged.
 Zero recorded events do not establish collector coverage.
 
 The panel uses the signed [Business Charts plugin](https://grafana.com/grafana/plugins/volkovlabs-echarts-panel/),

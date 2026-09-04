@@ -116,44 +116,41 @@ class DashboardSQLTests(unittest.TestCase):
         self.assertEqual(len(cumulative), 2)
         self.assertTrue(all(r["Departures"] == r["Arrivals"] == 0 for r in cumulative))
         heatmap = query(11, fixtures="")
-        self.assertEqual(len(heatmap), 168)
-        elapsed = [r for r in heatmap if r["Elapsed hours"]]
-        self.assertEqual(len(elapsed), 1)
-        self.assertEqual((elapsed[0]["Departures"], elapsed[0]["Arrivals"]), (0, 0))
-        self.assertTrue(all(r["Departures"] is None for r in heatmap if not r["Elapsed hours"]))
+        self.assertEqual(len(heatmap), 4)
+        self.assertTrue(all(r["Elapsed"] == 1 and r["Departures"] == r["Arrivals"] == 0 for r in heatmap))
 
     def test_heatmap_complete_grid_reconciles_with_stats(self):
         cells = query(11)
-        self.assertEqual([(r["Weekday"], r["Hour"]) for r in cells], [(d, h) for d in range(1, 8) for h in range(24)])
+        self.assertEqual([(r["Date"], r["Minute"]) for r in cells], [("2026-09-05", m) for m in (240, 255, 270, 285)])
         self.assertEqual(sum(r["Departures"] or 0 for r in cells), query(1)[0]["Departures"])
         self.assertEqual(sum(r["Arrivals"] or 0 for r in cells), query(2)[0]["Arrivals"])
-        saturday = next(r for r in cells if r["Weekday"] == 6 and r["Hour"] == 4)
-        self.assertEqual((saturday["Departures"], saturday["Arrivals"]), (4, 3))
-        self.assertEqual((saturday["Selected hours"], saturday["Elapsed hours"]), (1, 1))
+        self.assertEqual([(r["Departures"], r["Arrivals"]) for r in cells], [(3, 1), (0, 1), (0, 1), (1, 0)])
+        self.assertEqual([r["Elapsed"] for r in cells], [1, 1, 1, 1])
 
-    def test_heatmap_aggregates_repeated_weekdays_in_utc(self):
+    def test_heatmap_keeps_actual_dates_separate_in_utc(self):
         fixtures = """INSERT INTO flight_events VALUES
           ('2026-09-05 04:15Z', 'EKCH', 'departure', 'EKCH', 'EGLL'),
           ('2026-09-12 06:30+02', 'EKCH', 'arrival', 'EGLL', 'EKCH'),
           ('2026-09-05 23:30-02', 'EKCH', 'arrival', 'EGLL', 'EKCH');"""
         cells = query(11, start="2026-09-05T04:00Z", end="2026-09-12T05:00Z", now="2026-09-13T00:00Z", fixtures=fixtures)
-        saturday = next(r for r in cells if (r["Weekday"], r["Hour"]) == (6, 4))
-        self.assertEqual((saturday["Departures"], saturday["Arrivals"]), (1, 1))
-        self.assertEqual(saturday["Elapsed hours"], 2)
-        sunday = next(r for r in cells if (r["Weekday"], r["Hour"]) == (7, 1))
+        first = next(r for r in cells if (r["Date"], r["Minute"]) == ("2026-09-05", 255))
+        later = next(r for r in cells if (r["Date"], r["Minute"]) == ("2026-09-12", 270))
+        self.assertEqual((first["Departures"], first["Arrivals"]), (1, 0))
+        self.assertEqual((later["Departures"], later["Arrivals"]), (0, 1))
+        sunday = next(r for r in cells if (r["Date"], r["Minute"]) == ("2026-09-06", 90))
         self.assertEqual(sunday["Arrivals"], 1)
 
     def test_heatmap_future_and_unselected_cells_are_not_zero(self):
         cells = query(11, end="2026-09-05T06:00Z", now="2026-09-05T04:20Z")
-        current = next(r for r in cells if (r["Weekday"], r["Hour"]) == (6, 4))
-        self.assertEqual((current["Departures"], current["Arrivals"]), (3, 2))
-        future = next(r for r in cells if (r["Weekday"], r["Hour"]) == (6, 5))
-        self.assertEqual((future["Selected hours"], future["Elapsed hours"]), (1, 0))
+        self.assertEqual(len(cells), 8)
+        current = next(r for r in cells if r["Minute"] == 255)
+        self.assertEqual((current["Departures"], current["Arrivals"]), (0, 1))
+        self.assertEqual(current["Observed until"], 1788582000000)
+        future = next(r for r in cells if r["Minute"] == 270)
+        self.assertEqual(future["Elapsed"], 0)
         self.assertIsNone(future["Departures"])
         self.assertIsNone(future["Arrivals"])
-        outside = next(r for r in cells if (r["Weekday"], r["Hour"]) == (1, 0))
-        self.assertEqual(outside["Selected hours"], 0)
-        self.assertIsNone(outside["Departures"])
+        self.assertTrue(all(r["Date"] == "2026-09-05" and 240 <= r["Minute"] < 360 for r in cells))
         self.assertTrue(all(r["Departures"] is None for r in query(11, now="2026-09-05T03:00Z")))
 
     def test_partial_range_does_not_include_events_outside_selection(self):
@@ -167,13 +164,23 @@ class DashboardSQLTests(unittest.TestCase):
         cells = query(11, **args)
         self.assertEqual(sum(r["Departures"] or 0 for r in cells), 1)
         self.assertEqual(sum(r["Arrivals"] or 0 for r in cells), 3)
+        self.assertEqual(len(cells), 3)
+        self.assertEqual(cells[0]["Period start"], 1788580920000)
+        self.assertEqual(cells[-1]["Period end"], 1788582720000)
 
-    def test_heatmap_does_not_mark_future_partial_hour_as_elapsed(self):
-        cells = query(11, start="2026-09-05T04:30Z", now="2026-09-05T04:20Z")
-        selected = [r for r in cells if r["Selected hours"]]
-        self.assertEqual(len(selected), 1)
-        self.assertEqual(selected[0]["Elapsed hours"], 0)
-        self.assertIsNone(selected[0]["Departures"])
+    def test_heatmap_does_not_mark_future_partial_interval_as_elapsed(self):
+        cells = query(11, start="2026-09-05T04:25Z", end="2026-09-05T04:30Z", now="2026-09-05T04:20Z")
+        self.assertEqual(len(cells), 1)
+        self.assertEqual(cells[0]["Elapsed"], 0)
+        self.assertIsNone(cells[0]["Departures"])
+
+    def test_heatmap_midnight_exclusive_end_and_empty_range(self):
+        cells = query(11, start="2026-09-04T23:45Z", end="2026-09-05T00:15Z")
+        self.assertEqual([(r["Date"], r["Minute"]) for r in cells], [("2026-09-04", 1425), ("2026-09-05", 0)])
+        cells = query(11, start="2026-09-04T23:45Z", end="2026-09-05T00:00Z")
+        self.assertEqual(len(cells), 1)
+        self.assertEqual(cells[0]["Date"], "2026-09-04")
+        self.assertEqual(query(11, start="2026-09-05T04:00Z", end="2026-09-05T04:00Z"), [])
 
     def test_future_intervals_are_not_reported_as_zero(self):
         args = {"now": "2026-09-05T04:20:00Z"}
