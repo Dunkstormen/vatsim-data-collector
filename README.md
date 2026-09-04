@@ -38,6 +38,48 @@ The collector also derives EKCH movement events from consecutive pilot observati
 
 PostgreSQL is available on `localhost:5432` by default. Override `POSTGRES_PORT` or `GRAFANA_PORT` in `.env` if those ports are occupied.
 
+## Copenhagen Live dashboard
+
+The EKCH dashboard includes top destination airports for detected departures, top
+origin airports for detected arrivals, a stacked timeline of movements per
+15 minutes, the busiest periods, and cumulative departure/arrival curves.
+Departures are blue and arrivals are green throughout. The rankings use filed
+origins/destinations attached to detected movements, with blank codes shown as
+`Unknown`.
+
+All historical panels share the selected time range, including its start and
+excluding its end. The cumulative curves step at each event timestamp, start
+counting from the selected range start, and end at the same values as the two
+accumulated stat panels. The live online panels always use the latest snapshot.
+
+Use the **Full event · 5 Sep 04–22Z** dashboard link to select Copenhagen Live
+2026 (5 September, 04:00–22:00 UTC). All times on this dashboard display in UTC.
+Empty elapsed quarter-hours are populated with zero recorded movements, and
+cumulative curves remain flat across quiet periods. Future periods are not
+plotted. Partial periods at selection boundaries are included. A zero means no
+event was recorded, not necessarily that collection had uninterrupted coverage.
+The charts use existing `flight_events`; this dashboard update does not backfill
+movement events from older raw snapshots.
+
+After pulling a dashboard-only update, Grafana normally reprovisions it within
+30 seconds. Refresh the dashboard; if needed, restart only Grafana:
+
+```bash
+git pull --ff-only
+podman-compose -f docker-compose.portainer.yml restart grafana
+```
+
+Dashboard SQL integration tests run on PostgreSQL using transaction-local
+temporary fixtures (including empty periods, boundaries, future periods, and
+cumulative/stat reconciliation):
+
+```bash
+export TEST_PSQL_COMMAND='["podman","exec","-i","YOUR_TEST_POSTGRES_CONTAINER","psql","-U","postgres","-d","vatsim"]'
+python3 -m unittest discover -s tests -v
+```
+
+Without `TEST_PSQL_COMMAND`, only static dashboard checks run and SQL tests skip.
+
 ## GitHub Container Registry and Portainer
 
 Every push to `main` builds the collector for AMD64 and ARM64 and publishes these public GHCR tags:

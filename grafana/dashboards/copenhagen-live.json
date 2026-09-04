@@ -1,107 +1,930 @@
 {
-  "annotations": {"list": []},
+  "annotations": {
+    "list": []
+  },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "title": "Full event · 5 Sep 04–22Z",
+      "type": "link",
+      "url": "/d/copenhagen-live/copenhagen-live?from=1788580800000&to=1788645600000&timezone=utc",
+      "targetBlank": false
+    }
+  ],
   "liveNow": true,
   "panels": [
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
       "id": 1,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Departures\" FROM flight_events WHERE airport = 'EKCH' AND event_type = 'departure' AND $__timeFilter(event_at)", "refId": "A"}],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n)\nSELECT count(*) AS \"Departures\"\nFROM flight_events e CROSS JOIN bounds b\nWHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end AND e.event_type = 'departure'",
+          "refId": "A"
+        }
+      ],
       "title": "Accumulated departures",
       "description": "Detected ground-to-airborne transitions at EKCH in the selected time range.",
       "type": "stat"
     },
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
       "id": 2,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Arrivals\" FROM flight_events WHERE airport = 'EKCH' AND event_type = 'arrival' AND $__timeFilter(event_at)", "refId": "A"}],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n)\nSELECT count(*) AS \"Arrivals\"\nFROM flight_events e CROSS JOIN bounds b\nWHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end AND e.event_type = 'arrival'",
+          "refId": "A"
+        }
+      ],
       "title": "Accumulated arrivals",
       "description": "Detected airborne-to-ground transitions at EKCH in the selected time range.",
       "type": "stat"
     },
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "light-blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "light-blue", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "light-blue"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "light-blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
       "id": 3,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT count(*) AS \"Outbound\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND departure = 'EKCH'", "refId": "A"}],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT count(*) AS \"Outbound\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND departure = 'EKCH'",
+          "refId": "A"
+        }
+      ],
       "title": "Current EKCH departures online",
       "type": "stat"
     },
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "semi-dark-green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "semi-dark-green", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "semi-dark-green"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "semi-dark-green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
       "id": 4,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT count(*) AS \"Inbound\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND arrival = 'EKCH'", "refId": "A"}],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT count(*) AS \"Inbound\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND arrival = 'EKCH'",
+          "refId": "A"
+        }
+      ],
       "title": "Current EKCH arrivals online",
       "type": "stat"
     },
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "Flights", "axisPlacement": "auto", "drawStyle": "bars", "fillOpacity": 45, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "scaleDistribution": {"type": "linear"}, "showPoints": "never", "spanNulls": false, "stacking": {"group": "A", "mode": "normal"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 8, "w": 16, "x": 0, "y": 4},
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Movements / 15 min",
+            "axisPlacement": "auto",
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "barAlignment": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Departures"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Arrivals"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 0,
+        "y": 4
+      },
       "id": 5,
-      "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
       "targets": [
-        {"editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT $__timeGroupAlias(event_at, $__interval), initcap(event_type) AS metric, count(*)::double precision AS value FROM flight_events WHERE airport = 'EKCH' AND $__timeFilter(event_at) GROUP BY 1, 2 ORDER BY 1", "refId": "A"}
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n), buckets AS (\n  SELECT bucket, GREATEST(bucket, b.range_start) AS period_start,\n         LEAST(bucket + interval '15 minutes', b.range_end) AS period_end\n  FROM bounds b\n  CROSS JOIN LATERAL generate_series(\n    date_bin(interval '15 minutes', b.range_start, timestamptz '1970-01-01 00:00:00+00'),\n    b.range_end - interval '1 microsecond', interval '15 minutes'\n  ) AS bucket\n  WHERE b.range_end > b.range_start\n), counts AS (\n  SELECT date_bin(interval '15 minutes', e.event_at, timestamptz '1970-01-01 00:00:00+00') AS bucket,\n         count(*) FILTER (WHERE e.event_type = 'departure') AS departures,\n         count(*) FILTER (WHERE e.event_type = 'arrival') AS arrivals\n  FROM flight_events e CROSS JOIN bounds b\n  WHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end\n  GROUP BY 1\n), periods AS (\n  SELECT b.period_start, b.period_end,\n         COALESCE(c.departures, 0) AS departures,\n         COALESCE(c.arrivals, 0) AS arrivals\n  FROM buckets b LEFT JOIN counts c USING (bucket)\n)\nSELECT period_start AS \"time\", departures::double precision AS \"Departures\",\n       arrivals::double precision AS \"Arrivals\"\nFROM periods ORDER BY period_start",
+          "refId": "A"
+        }
       ],
-      "title": "Detected movements",
-      "description": "Takeoff and landing state transitions detected in each interval.",
+      "title": "Traffic timeline · movements per 15 minutes",
+      "description": "Detected EKCH departures (blue) and arrivals (green), stacked in UTC quarter-hour bins. Empty elapsed intervals contain zero recorded events; future intervals are not plotted. First/last bins may be partial. Zero does not establish that the collector had complete coverage.",
       "type": "timeseries"
     },
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "custom": {"axisCenteredZero": false, "axisColorMode": "text", "axisLabel": "Flights", "axisPlacement": "auto", "fillOpacity": 70, "gradientMode": "none", "hideFrom": {"legend": false, "tooltip": false, "viz": false}, "lineWidth": 1, "scaleDistribution": {"type": "linear"}, "thresholdsStyle": {"mode": "off"}}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 4},
-      "id": 6,
-      "options": {"barRadius": 0, "barWidth": 0.8, "fullHighlight": false, "groupWidth": 0.7, "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false}, "orientation": "horizontal", "showValue": "always", "stacking": "none", "tooltip": {"mode": "single", "sort": "none"}, "xTickLabelRotation": 0, "xTickLabelSpacing": 0},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(NULLIF(destination, ''), 'Unknown') AS \"Destination\", count(*) AS \"Flights\" FROM flight_events WHERE airport = 'EKCH' AND event_type = 'departure' AND $__timeFilter(event_at) GROUP BY 1 ORDER BY 2 DESC LIMIT 10", "refId": "A"}],
-      "title": "Top departure destinations",
-      "type": "barchart"
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "minWidth": 50
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Period (UTC)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 160
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Departures"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Arrivals"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 65
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 55
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 4
+      },
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n), buckets AS (\n  SELECT bucket, GREATEST(bucket, b.range_start) AS period_start,\n         LEAST(bucket + interval '15 minutes', b.range_end) AS period_end\n  FROM bounds b\n  CROSS JOIN LATERAL generate_series(\n    date_bin(interval '15 minutes', b.range_start, timestamptz '1970-01-01 00:00:00+00'),\n    b.range_end - interval '1 microsecond', interval '15 minutes'\n  ) AS bucket\n  WHERE b.range_end > b.range_start\n), counts AS (\n  SELECT date_bin(interval '15 minutes', e.event_at, timestamptz '1970-01-01 00:00:00+00') AS bucket,\n         count(*) FILTER (WHERE e.event_type = 'departure') AS departures,\n         count(*) FILTER (WHERE e.event_type = 'arrival') AS arrivals\n  FROM flight_events e CROSS JOIN bounds b\n  WHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end\n  GROUP BY 1\n), periods AS (\n  SELECT b.period_start, b.period_end,\n         COALESCE(c.departures, 0) AS departures,\n         COALESCE(c.arrivals, 0) AS arrivals\n  FROM buckets b LEFT JOIN counts c USING (bucket)\n)\nSELECT to_char(period_start AT TIME ZONE 'UTC', 'DD Mon HH24:MI') || '–' ||\n       to_char(period_end AT TIME ZONE 'UTC', 'HH24:MI') AS \"Period (UTC)\",\n       departures AS \"Departures\", arrivals AS \"Arrivals\",\n       departures + arrivals AS \"Total\"\nFROM periods WHERE departures + arrivals > 0\nORDER BY \"Total\" DESC, period_start ASC LIMIT 8",
+          "refId": "A"
+        }
+      ],
+      "title": "Busiest 15-minute periods",
+      "type": "table",
+      "description": "Top 8 elapsed UTC periods ranked by combined detected departures and arrivals. Partial periods at the selected range boundaries are included; empty intervals are omitted from this ranking."
     },
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 12},
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Accumulated movements",
+            "axisPlacement": "auto",
+            "drawStyle": "line",
+            "fillOpacity": 8,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "barAlignment": 1
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Departures"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Arrivals"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n), increments AS (\n  SELECT e.event_at,\n         count(*) FILTER (WHERE e.event_type = 'departure') AS departures,\n         count(*) FILTER (WHERE e.event_type = 'arrival') AS arrivals\n  FROM flight_events e CROSS JOIN bounds b\n  WHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end\n  GROUP BY e.event_at\n), times AS (\n  SELECT range_start AS t FROM bounds WHERE range_end > range_start\n  UNION SELECT event_at FROM increments\n  UNION SELECT range_end FROM bounds WHERE range_end > range_start\n)\nSELECT t AS \"time\",\n       sum(COALESCE(i.departures, 0)) OVER (ORDER BY t ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)::double precision AS \"Departures\",\n       sum(COALESCE(i.arrivals, 0)) OVER (ORDER BY t ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)::double precision AS \"Arrivals\"\nFROM times LEFT JOIN increments i ON i.event_at = times.t\nORDER BY t",
+          "refId": "A"
+        }
+      ],
+      "title": "Accumulated departures and arrivals",
+      "description": "Running totals of detected EKCH movements from the selected range start. Each step occurs at the event timestamp; quiet periods stay flat. The final values equal the accumulated stat panels. Counts stop at now when the selected range extends into the future.",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Detected departures",
+            "axisPlacement": "auto",
+            "fillOpacity": 70,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "id": 6,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0,
+        "xField": "Destination"
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n)\nSELECT COALESCE(NULLIF(upper(btrim(e.destination)), ''), 'Unknown') AS \"Destination\",\n       count(*) AS \"Departures\"\nFROM flight_events e CROSS JOIN bounds b\nWHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end AND e.event_type = 'departure'\nGROUP BY 1 ORDER BY \"Departures\" DESC, \"Destination\" ASC LIMIT 10",
+          "refId": "A"
+        }
+      ],
+      "title": "Top destinations · departed EKCH",
+      "type": "barchart",
+      "description": "Top 10 filed destination airports of detected EKCH departures in the selected range. Ranked by departure count, with airport code as the tie-breaker. Missing destinations appear as Unknown."
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Detected arrivals",
+            "axisPlacement": "auto",
+            "fillOpacity": 70,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "min": 0,
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 9,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0,
+        "xField": "Origin"
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n)\nSELECT COALESCE(NULLIF(upper(btrim(e.origin)), ''), 'Unknown') AS \"Origin\",\n       count(*) AS \"Arrivals\"\nFROM flight_events e CROSS JOIN bounds b\nWHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end AND e.event_type = 'arrival'\nGROUP BY 1 ORDER BY \"Arrivals\" DESC, \"Origin\" ASC LIMIT 10",
+          "refId": "A"
+        }
+      ],
+      "title": "Top origins · landed at EKCH",
+      "type": "barchart",
+      "description": "Top 10 filed origin airports of detected EKCH arrivals in the selected range. Ranked by arrival count, with airport code as the tie-breaker. Missing origins appear as Unknown."
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 30
+      },
       "id": 7,
-      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT callsign AS \"Callsign\", departure AS \"From\", aircraft_short AS \"Aircraft\", altitude AS \"Altitude\", groundspeed AS \"GS\", data->'flight_plan'->>'route' AS \"Route\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND arrival = 'EKCH' ORDER BY altitude ASC NULLS LAST", "refId": "A"}],
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1) SELECT callsign AS \"Callsign\", departure AS \"From\", aircraft_short AS \"Aircraft\", altitude AS \"Altitude\", groundspeed AS \"GS\", data->'flight_plan'->>'route' AS \"Route\" FROM pilots WHERE snapshot_id = (SELECT id FROM latest) AND arrival = 'EKCH' ORDER BY altitude ASC NULLS LAST",
+          "refId": "A"
+        }
+      ],
       "title": "Current inbound flights",
       "type": "table"
     },
     {
-      "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
-      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 12},
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 30
+      },
       "id": 8,
-      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1), positions AS (SELECT callsign, name, frequency, 'Controller' AS kind FROM controllers WHERE snapshot_id = (SELECT id FROM latest) AND callsign ~ '^(EKCH|EKDK)_' UNION ALL SELECT callsign, name, frequency, 'ATIS' AS kind FROM atis WHERE snapshot_id = (SELECT id FROM latest) AND callsign LIKE 'EKCH_%') SELECT kind AS \"Type\", callsign AS \"Callsign\", name AS \"Name\", frequency AS \"Frequency\" FROM positions ORDER BY kind, callsign", "refId": "A"}],
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (SELECT id FROM snapshots ORDER BY feed_updated_at DESC LIMIT 1), positions AS (SELECT callsign, name, frequency, 'Controller' AS kind FROM controllers WHERE snapshot_id = (SELECT id FROM latest) AND callsign ~ '^(EKCH|EKDK)_' UNION ALL SELECT callsign, name, frequency, 'ATIS' AS kind FROM atis WHERE snapshot_id = (SELECT id FROM latest) AND callsign LIKE 'EKCH_%') SELECT kind AS \"Type\", callsign AS \"Callsign\", name AS \"Name\", frequency AS \"Frequency\" FROM positions ORDER BY kind, callsign",
+          "refId": "A"
+        }
+      ],
       "title": "Copenhagen ATC and ATIS online",
       "type": "table"
     }
   ],
   "refresh": "15s",
   "schemaVersion": 40,
-  "tags": ["vatsim", "copenhagen", "ekch"],
-  "templating": {"list": []},
-  "time": {"from": "now-6h", "to": "now"},
+  "tags": [
+    "vatsim",
+    "copenhagen",
+    "ekch"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "timepicker": {},
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Copenhagen Live",
   "uid": "copenhagen-live",
-  "version": 1,
+  "version": 2,
   "weekStart": "monday"
 }
