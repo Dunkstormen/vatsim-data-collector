@@ -42,8 +42,10 @@ PostgreSQL is available on `localhost:5432` by default. Override `POSTGRES_PORT`
 
 The EKCH dashboard includes top destination airports for detected departures, top
 origin airports for detected arrivals, a stacked timeline of movements per
-15 minutes, the busiest periods, and cumulative departure/arrival curves.
-Departures are blue and arrivals are green throughout. The rankings use filed
+15 minutes, a split-cell traffic heatmap, and cumulative departure/arrival curves.
+The timeline, cumulative curves, and rankings use blue departures and green
+arrivals. The heatmap follows the Flightstrips Ledger reference: green departures
+on the left of each cell and orange arrivals on the right. The rankings use filed
 origins/destinations attached to detected movements, with blank codes shown as
 `Unknown`.
 
@@ -60,6 +62,35 @@ plotted. Partial periods at selection boundaries are included. A zero means no
 event was recorded, not necessarily that collection had uninterrupted coverage.
 The charts use existing `flight_events`; this dashboard update does not backfill
 movement events from older raw snapshots.
+
+The heatmap replaces the busiest-periods table. It contains a complete
+Monday–Sunday by 00–23 UTC grid. Each half's intensity shows the number of detected
+movements, with one shared scale for both directions; hover for exact counts.
+Its totals reconcile with the accumulated stat panels. Multiple occurrences of
+the same weekday/hour in a longer selection are **summed**, not averaged. Quiet
+elapsed hours show zero; grey cells are outside the selection and outlined cells
+have not elapsed yet. Partial hours include only events inside the selection.
+Zero recorded events do not establish collector coverage.
+
+The panel uses the signed [Business Charts plugin](https://grafana.com/grafana/plugins/volkovlabs-echarts-panel/),
+pinned to **6.6.0** for Grafana 11.6 compatibility in both Compose files. The
+Grafana container downloads it from the Grafana plugin catalog on initial
+installation, so outbound internet access is required. No unsigned-plugin or
+HTML-sanitization bypass is enabled, and the chart does not load external scripts.
+Do not blindly install the latest plugin version, which may need newer Grafana.
+
+**First heatmap upgrade:** recreate only Grafana to apply the plugin environment
+setting (a restart alone does not apply changed Compose environment variables):
+
+```bash
+git pull --ff-only
+podman-compose -f docker-compose.portainer.yml up -d --no-deps --force-recreate grafana
+```
+
+The existing Grafana volume is reused; PostgreSQL and the collector are not
+recreated. For Docker use `docker compose` instead of `podman-compose`. For
+Portainer, pull and redeploy the Git stack. If the panel reports a missing plugin,
+check Grafana's startup logs for plugin installation/download errors.
 
 After pulling a dashboard-only update, Grafana normally reprovisions it within
 30 seconds. Refresh the dashboard; if needed, restart only Grafana:
@@ -79,6 +110,17 @@ python3 -m unittest discover -s tests -v
 ```
 
 Without `TEST_PSQL_COMMAND`, only static dashboard checks run and SQL tests skip.
+
+Heatmap rendering logic tests (no browser dependencies):
+
+```bash
+node --test tests/test_traffic_heatmap.cjs
+```
+
+The readable panel sources are `grafana/panels/traffic-heatmap.js` and
+`grafana/queries/traffic-heatmap.sql`. After editing them, run
+`python3 scripts/update_traffic_heatmap.py` to embed them in the provisioned
+dashboard, then run the tests above. A consistency test prevents source/JSON drift.
 
 ## GitHub Container Registry and Portainer
 

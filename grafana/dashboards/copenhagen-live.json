@@ -259,6 +259,53 @@
         "defaults": {
           "color": {
             "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "id": 11,
+      "options": {
+        "renderer": "svg",
+        "map": "none",
+        "editorMode": "code",
+        "editor": {
+          "format": "auto"
+        },
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "getOption": "// Business Charts 6.6.0 Charts Function. Embedded by scripts/update_traffic_heatmap.py.\n// All counts come from PostgreSQL; never invent observations for unselected/future cells.\nconst frame = context.panel.data.series.find(s => s.fields.some(f => f.name === 'Weekday'));\nconst theme = context.grafana.theme;\nconst dark = theme.isDark;\nconst text = theme.colors.text.primary;\nconst muted = theme.colors.text.secondary;\nconst days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];\nconst hourLabel = n => String(n).padStart(2, '0');\n\nif (!frame) {\n  return { series: [], graphic: [{ type: 'text', left: 'center', top: 'middle',\n    style: { text: 'Waiting for movement data', fill: muted, font: '13px sans-serif' } }] };\n}\nconst fields = Object.fromEntries(frame.fields.map(f => [f.name, f.values]));\nconst rows = Array.from({ length: frame.length }, (_, i) => [\n  Number(fields.Hour[i]), Number(fields.Weekday[i]) - 1,\n  fields.Departures[i] == null ? null : Number(fields.Departures[i]),\n  fields.Arrivals[i] == null ? null : Number(fields.Arrivals[i]),\n  Number(fields['Selected hours'][i]), Number(fields['Elapsed hours'][i]),\n]);\nconst totals = rows.reduce((sum, r) => [sum[0] + (r[2] ?? 0), sum[1] + (r[3] ?? 0)], [0, 0]);\n// One shared scale: equal counts get equal intensity in both halves.\nconst maximumCount = Math.max(0, ...rows.flatMap(r => [r[2] ?? 0, r[3] ?? 0]));\nconst peak = Math.max(1, maximumCount);\nconst emptyColor = dark ? '#202830' : '#edf2f0';\nconst zeroColor = dark ? '#35443e' : '#dce8e2';\nconst base = dark ? [36, 48, 46] : [228, 239, 233];\nconst endpoints = dark ? [[16, 185, 129], [245, 145, 66]] : [[5, 130, 91], [183, 83, 17]];\nfunction color(count, direction) {\n  if (count == null) return emptyColor;\n  if (count === 0) return zeroColor;\n  const weight = 0.2 + 0.8 * count / peak;\n  return 'rgb(' + base.map((value, i) => Math.round(value + (endpoints[direction][i] - value) * weight)).join(',') + ')';\n}\nfunction tooltip(params) {\n  const [hour, day, departures, arrivals, selected, elapsed] = params.data;\n  const heading = `${days[day]} ${hourLabel(hour)}:00–${hourLabel(hour + 1)}:00 UTC`;\n  if (!selected) return `${heading}\\nOutside the selected time range`;\n  if (!elapsed) return `${heading}\\nNot yet elapsed — no counts reported`;\n  const scope = elapsed > 1 ? `\\nSummed across ${elapsed} selected hourly slots` : '\\nWithin the selected time range';\n  const future = selected > elapsed ? `\\n${selected - elapsed} future slot(s) excluded` : '';\n  return `${heading}\\nDepartures (left): ${departures}\\nArrivals (right): ${arrivals}\\nTotal: ${departures + arrivals}${scope}${future}`;\n}\nconst badge = (label, total, direction, x, compact) => ({ id: `badge-${direction}`, type: 'text', left: x, top: 15,\n  style: { text: `${label}  ${total.toLocaleString()}`, fill: color(peak, direction),\n    font: `${compact ? 12 : 14}px sans-serif`, backgroundColor: dark ? '#202c2a' : '#f0f7f3',\n    borderColor: color(peak, direction), borderWidth: 1, borderRadius: 6, padding: [7, 10] } });\n// ECharts mutates graphic options; each responsive layout needs fresh swatches.\nconst key = () => Array.from({ length: 5 }, (_, i) => ({ type: 'group', x: i * 15, children: [\n  { type: 'rect', shape: { x: 0, y: 0, width: 6, height: 11, r: [2, 0, 0, 2] }, style: { fill: color(peak * i / 4, 0) } },\n  { type: 'rect', shape: { x: 6, y: 0, width: 6, height: 11, r: [0, 2, 2, 0] }, style: { fill: color(peak * i / 4, 1) } },\n] }));\n\n// Media options are evaluated by ECharts on resize, not only on the next data refresh.\nconst layout = compact => ({\n  grid: { left: compact ? 42 : 62, right: compact ? 10 : 24, top: 100, bottom: compact ? 70 : 62 },\n  xAxis: { axisLabel: { interval: compact ? 5 : 2, color: muted, fontSize: compact ? 9 : 11, margin: 13 } },\n  yAxis: { axisLabel: { color: muted, fontSize: compact ? 10 : 12, margin: 12 } },\n  graphic: { elements: [\n    badge('Departures', totals[0], 0, compact ? 12 : 24, compact),\n    badge('Arrivals', totals[1], 1, compact ? 166 : 202, compact),\n    { id: 'subtitle', type: 'text', left: compact ? 12 : 24, top: 59,\n      style: { text: compact ? 'Weekday × hour · UTC · selected range' : 'Weekday and hour of detection in UTC · selected range · repeated weekdays are summed', fill: muted, font: `${compact ? 10 : 12}px sans-serif` } },\n    { id: 'help', type: 'text', left: compact ? 12 : 24, bottom: compact ? 40 : 20,\n      style: { text: compact ? 'Departures left · arrivals right · hover for counts' : 'Split cells: departures left, arrivals right. Hover for exact counts. Grey = outside range; outline = future.', fill: muted, font: `${compact ? 9 : 11}px sans-serif` } },\n    { id: 'scale', type: 'group', right: 24, bottom: 18, children: maximumCount ? [\n      { type: 'text', x: -36, y: 0, style: { text: 'Quiet', fill: muted, font: '10px sans-serif' } },\n      ...key(),\n      { type: 'text', x: 80, y: 0, style: { text: `Busy (${peak})`, fill: muted, font: '10px sans-serif' } },\n    ] : [{ type: 'text', style: { text: 'No recorded movements', fill: muted, font: '10px sans-serif' } }] },\n  ].map(element => ({ ...element, $action: 'replace' })) },\n});\nconst baseOption = {\n  backgroundColor: 'transparent',\n  animation: false,\n  aria: { enabled: true, description: `Traffic heatmap in UTC. Monday through Sunday, hours 00 to 23. Departures left, arrivals right. ${totals[0]} departures and ${totals[1]} arrivals.` },\n  ...layout(false),\n  xAxis: { type: 'category', data: Array.from({ length: 24 }, (_, i) => hourLabel(i)), position: 'top',\n    axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, ...layout(false).xAxis },\n  yAxis: { type: 'category', data: days, inverse: true,\n    axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, ...layout(false).yAxis },\n  tooltip: { trigger: 'item', confine: true, renderMode: 'richText', formatter: tooltip,\n    backgroundColor: theme.colors.background.primary, borderColor: theme.colors.border.medium,\n    textStyle: { color: text, fontSize: 12 } },\n  series: [{ type: 'custom', name: 'Traffic', coordinateSystem: 'cartesian2d',\n    dimensions: ['Hour', 'Weekday', 'Departures', 'Arrivals', 'Selected hours', 'Elapsed hours'],\n    encode: { x: 0, y: 1, tooltip: [2, 3] }, data: rows,\n    renderItem: (params, api) => {\n      const compact = api.getWidth() < 600;\n      const center = api.coord([api.value(0), api.value(1)]);\n      const size = api.size([1, 1]);\n      const cellWidth = Math.max(2, Math.abs(size[0]) - (compact ? 2 : 6));\n      const cellHeight = Math.max(2, Math.min(32, Math.abs(size[1]) - 6));\n      const x = center[0] - cellWidth / 2, y = center[1] - cellHeight / 2;\n      const row = rows[params.dataIndex];\n      const future = row[4] > 0 && row[5] === 0;\n      return { type: 'group', children: [0, 1].map(direction => ({\n        type: 'rect', shape: { x: x + direction * cellWidth / 2, y, width: cellWidth / 2,\n          height: cellHeight, r: direction ? [0, 3, 3, 0] : [3, 0, 0, 3] },\n        style: { fill: color(row[direction + 2], direction), stroke: future ? muted : undefined,\n          lineWidth: future ? 0.6 : 0, lineDash: future ? [2, 2] : undefined },\n        emphasis: { style: { stroke: text, lineWidth: 1 } },\n      })) };\n    },\n  }],\n};\nreturn { baseOption, media: [{ query: { maxWidth: 599 }, option: layout(true) }, { option: layout(false) }] };"
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         $__timeTo()::timestamptz AS range_end,\n         LEAST($__timeTo()::timestamptz, now()) AS elapsed_end\n), selected_hours AS (\n  SELECT extract(isodow FROM slot AT TIME ZONE 'UTC')::integer AS weekday,\n         extract(hour FROM slot AT TIME ZONE 'UTC')::integer AS hour,\n         count(*) AS selected_hours,\n         count(*) FILTER (WHERE GREATEST(slot, b.range_start) < b.elapsed_end) AS elapsed_hours\n  FROM bounds b\n  CROSS JOIN LATERAL generate_series(\n    date_trunc('hour', b.range_start AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',\n    b.range_end - interval '1 microsecond', interval '1 hour'\n  ) AS slot\n  WHERE b.range_end > b.range_start\n  GROUP BY 1, 2\n), counts AS (\n  SELECT extract(isodow FROM e.event_at AT TIME ZONE 'UTC')::integer AS weekday,\n         extract(hour FROM e.event_at AT TIME ZONE 'UTC')::integer AS hour,\n         count(*) FILTER (WHERE e.event_type = 'departure') AS departures,\n         count(*) FILTER (WHERE e.event_type = 'arrival') AS arrivals\n  FROM flight_events e CROSS JOIN bounds b\n  WHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.elapsed_end\n  GROUP BY 1, 2\n)\nSELECT d.weekday AS \"Weekday\", h.hour AS \"Hour\",\n       CASE WHEN s.elapsed_hours > 0 THEN COALESCE(c.departures, 0) END AS \"Departures\",\n       CASE WHEN s.elapsed_hours > 0 THEN COALESCE(c.arrivals, 0) END AS \"Arrivals\",\n       COALESCE(s.selected_hours, 0) AS \"Selected hours\",\n       COALESCE(s.elapsed_hours, 0) AS \"Elapsed hours\"\nFROM generate_series(1, 7) AS d(weekday)\nCROSS JOIN generate_series(0, 23) AS h(hour)\nLEFT JOIN selected_hours s USING (weekday, hour)\nLEFT JOIN counts c USING (weekday, hour)\nORDER BY d.weekday, h.hour",
+          "refId": "A"
+        }
+      ],
+      "title": "Traffic heatmap · weekday and hour (UTC)",
+      "type": "volkovlabs-echarts-panel",
+      "description": "Detected EKCH movements in the selected range. Monday–Sunday rows and UTC hour columns; departures left (green), arrivals right (orange). Repeated weekday/hour slots are summed. One shared intensity scale for both directions. Elapsed hours without recorded events show zero; grey cells are outside the range, outlined cells are future. Zero does not prove collector coverage. Partial hours include only events inside the selection.",
+      "pluginVersion": "6.6.0"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "vatsim-postgres"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
           },
           "custom": {
             "axisCenteredZero": false,
@@ -338,10 +385,10 @@
         ]
       },
       "gridPos": {
-        "h": 10,
-        "w": 16,
+        "h": 8,
+        "w": 24,
         "x": 0,
-        "y": 4
+        "y": 15
       },
       "id": 5,
       "options": {
@@ -371,119 +418,6 @@
       "title": "Traffic timeline · movements per 15 minutes",
       "description": "Detected EKCH departures (blue) and arrivals (green), stacked in UTC quarter-hour bins. Empty elapsed intervals contain zero recorded events; future intervals are not plotted. First/last bins may be partial. Zero does not establish that the collector had complete coverage.",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "postgres",
-        "uid": "vatsim-postgres"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false,
-            "minWidth": 50
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "decimals": 0
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Period (UTC)"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 160
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Departures"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 90
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Arrivals"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 65
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 55
-              }
-            ]
-          }
-        ]
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 8,
-        "x": 16,
-        "y": 4
-      },
-      "id": 11,
-      "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
-          ],
-          "show": false
-        },
-        "showHeader": true
-      },
-      "targets": [
-        {
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "WITH bounds AS (\n  SELECT $__timeFrom()::timestamptz AS range_start,\n         LEAST($__timeTo()::timestamptz, now()) AS range_end\n), buckets AS (\n  SELECT bucket, GREATEST(bucket, b.range_start) AS period_start,\n         LEAST(bucket + interval '15 minutes', b.range_end) AS period_end\n  FROM bounds b\n  CROSS JOIN LATERAL generate_series(\n    date_bin(interval '15 minutes', b.range_start, timestamptz '1970-01-01 00:00:00+00'),\n    b.range_end - interval '1 microsecond', interval '15 minutes'\n  ) AS bucket\n  WHERE b.range_end > b.range_start\n), counts AS (\n  SELECT date_bin(interval '15 minutes', e.event_at, timestamptz '1970-01-01 00:00:00+00') AS bucket,\n         count(*) FILTER (WHERE e.event_type = 'departure') AS departures,\n         count(*) FILTER (WHERE e.event_type = 'arrival') AS arrivals\n  FROM flight_events e CROSS JOIN bounds b\n  WHERE e.airport = 'EKCH'\n    AND e.event_at >= b.range_start AND e.event_at < b.range_end\n  GROUP BY 1\n), periods AS (\n  SELECT b.period_start, b.period_end,\n         COALESCE(c.departures, 0) AS departures,\n         COALESCE(c.arrivals, 0) AS arrivals\n  FROM buckets b LEFT JOIN counts c USING (bucket)\n)\nSELECT to_char(period_start AT TIME ZONE 'UTC', 'DD Mon HH24:MI') || '–' ||\n       to_char(period_end AT TIME ZONE 'UTC', 'HH24:MI') AS \"Period (UTC)\",\n       departures AS \"Departures\", arrivals AS \"Arrivals\",\n       departures + arrivals AS \"Total\"\nFROM periods WHERE departures + arrivals > 0\nORDER BY \"Total\" DESC, period_start ASC LIMIT 8",
-          "refId": "A"
-        }
-      ],
-      "title": "Busiest 15-minute periods",
-      "type": "table",
-      "description": "Top 8 elapsed UTC periods ranked by combined detected departures and arrivals. Partial periods at the selected range boundaries are included; empty intervals are omitted from this ranking."
     },
     {
       "datasource": {
@@ -576,7 +510,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 14
+        "y": 23
       },
       "id": 10,
       "options": {
@@ -657,7 +591,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 31
       },
       "id": 6,
       "options": {
@@ -746,7 +680,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 31
       },
       "id": 9,
       "options": {
@@ -818,7 +752,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 30
+        "y": 39
       },
       "id": 7,
       "options": {
@@ -879,7 +813,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 30
+        "y": 39
       },
       "id": 8,
       "options": {
@@ -925,6 +859,6 @@
   "timezone": "utc",
   "title": "Copenhagen Live",
   "uid": "copenhagen-live",
-  "version": 2,
+  "version": 3,
   "weekStart": "monday"
 }

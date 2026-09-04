@@ -52,6 +52,15 @@ def query(panel_id, start="2026-09-05T04:00:00Z", end="2026-09-05T05:00:00Z",
 
 
 class DashboardConfigTests(unittest.TestCase):
+    def test_heatmap_sources_and_plugin_version_match(self):
+        root = Path(__file__).resolve().parents[1]
+        heatmap = PANELS[11]
+        self.assertEqual(heatmap["type"], "volkovlabs-echarts-panel")
+        self.assertEqual(heatmap["options"]["getOption"], (root / "grafana/panels/traffic-heatmap.js").read_text(encoding="utf-8").strip())
+        self.assertEqual(heatmap["targets"][0]["rawSql"], (root / "grafana/queries/traffic-heatmap.sql").read_text(encoding="utf-8").strip())
+        for filename in ("docker-compose.yml", "docker-compose.portainer.yml"):
+            self.assertIn('GF_INSTALL_PLUGINS: "volkovlabs-echarts-panel 6.6.0"', (root / filename).read_text())
+
     def test_layout_has_unique_ids_and_no_overlaps(self):
         self.assertEqual(len(PANELS), len(DASHBOARD["panels"]))
         positions = [p["gridPos"] for p in DASHBOARD["panels"]]
@@ -106,13 +115,46 @@ class DashboardSQLTests(unittest.TestCase):
         cumulative = query(10, fixtures="")
         self.assertEqual(len(cumulative), 2)
         self.assertTrue(all(r["Departures"] == r["Arrivals"] == 0 for r in cumulative))
-        self.assertEqual(query(11, fixtures=""), [])
+        heatmap = query(11, fixtures="")
+        self.assertEqual(len(heatmap), 168)
+        elapsed = [r for r in heatmap if r["Elapsed hours"]]
+        self.assertEqual(len(elapsed), 1)
+        self.assertEqual((elapsed[0]["Departures"], elapsed[0]["Arrivals"]), (0, 0))
+        self.assertTrue(all(r["Departures"] is None for r in heatmap if not r["Elapsed hours"]))
 
-    def test_busiest_periods_sort_by_total_then_time(self):
-        periods = query(11)
-        self.assertEqual([r["Total"] for r in periods], [4, 1, 1, 1])
-        self.assertEqual(periods[0]["Period (UTC)"], "05 Sep 04:00–04:15")
-        self.assertEqual(periods[-1]["Period (UTC)"], "05 Sep 04:45–05:00")
+    def test_heatmap_complete_grid_reconciles_with_stats(self):
+        cells = query(11)
+        self.assertEqual([(r["Weekday"], r["Hour"]) for r in cells], [(d, h) for d in range(1, 8) for h in range(24)])
+        self.assertEqual(sum(r["Departures"] or 0 for r in cells), query(1)[0]["Departures"])
+        self.assertEqual(sum(r["Arrivals"] or 0 for r in cells), query(2)[0]["Arrivals"])
+        saturday = next(r for r in cells if r["Weekday"] == 6 and r["Hour"] == 4)
+        self.assertEqual((saturday["Departures"], saturday["Arrivals"]), (4, 3))
+        self.assertEqual((saturday["Selected hours"], saturday["Elapsed hours"]), (1, 1))
+
+    def test_heatmap_aggregates_repeated_weekdays_in_utc(self):
+        fixtures = """INSERT INTO flight_events VALUES
+          ('2026-09-05 04:15Z', 'EKCH', 'departure', 'EKCH', 'EGLL'),
+          ('2026-09-12 06:30+02', 'EKCH', 'arrival', 'EGLL', 'EKCH'),
+          ('2026-09-05 23:30-02', 'EKCH', 'arrival', 'EGLL', 'EKCH');"""
+        cells = query(11, start="2026-09-05T04:00Z", end="2026-09-12T05:00Z", now="2026-09-13T00:00Z", fixtures=fixtures)
+        saturday = next(r for r in cells if (r["Weekday"], r["Hour"]) == (6, 4))
+        self.assertEqual((saturday["Departures"], saturday["Arrivals"]), (1, 1))
+        self.assertEqual(saturday["Elapsed hours"], 2)
+        sunday = next(r for r in cells if (r["Weekday"], r["Hour"]) == (7, 1))
+        self.assertEqual(sunday["Arrivals"], 1)
+
+    def test_heatmap_future_and_unselected_cells_are_not_zero(self):
+        cells = query(11, end="2026-09-05T06:00Z", now="2026-09-05T04:20Z")
+        current = next(r for r in cells if (r["Weekday"], r["Hour"]) == (6, 4))
+        self.assertEqual((current["Departures"], current["Arrivals"]), (3, 2))
+        future = next(r for r in cells if (r["Weekday"], r["Hour"]) == (6, 5))
+        self.assertEqual((future["Selected hours"], future["Elapsed hours"]), (1, 0))
+        self.assertIsNone(future["Departures"])
+        self.assertIsNone(future["Arrivals"])
+        outside = next(r for r in cells if (r["Weekday"], r["Hour"]) == (1, 0))
+        self.assertEqual(outside["Selected hours"], 0)
+        self.assertIsNone(outside["Departures"])
+        self.assertTrue(all(r["Departures"] is None for r in query(11, now="2026-09-05T03:00Z")))
 
     def test_partial_range_does_not_include_events_outside_selection(self):
         args = {"start": "2026-09-05T04:02:00Z", "end": "2026-09-05T04:32:00Z"}
@@ -122,6 +164,16 @@ class DashboardSQLTests(unittest.TestCase):
         self.assertEqual(query(1, **args)[0]["Departures"], 1)
         self.assertEqual(query(10, **args)[-1]["Departures"], 1)
         self.assertEqual(query(10, **args)[-1]["Arrivals"], 3)
+        cells = query(11, **args)
+        self.assertEqual(sum(r["Departures"] or 0 for r in cells), 1)
+        self.assertEqual(sum(r["Arrivals"] or 0 for r in cells), 3)
+
+    def test_heatmap_does_not_mark_future_partial_hour_as_elapsed(self):
+        cells = query(11, start="2026-09-05T04:30Z", now="2026-09-05T04:20Z")
+        selected = [r for r in cells if r["Selected hours"]]
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected[0]["Elapsed hours"], 0)
+        self.assertIsNone(selected[0]["Departures"])
 
     def test_future_intervals_are_not_reported_as_zero(self):
         args = {"now": "2026-09-05T04:20:00Z"}

@@ -43,6 +43,8 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in Portainer}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # Pinned for Grafana 11.6 compatibility; installs the signed split-cell heatmap panel.
+      GF_INSTALL_PLUGINS: "volkovlabs-echarts-panel 6.6.0"
       POSTGRES_DB: ${POSTGRES_DB:-vatsim}
       POSTGRES_USER: ${POSTGRES_USER:-vatsim}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
