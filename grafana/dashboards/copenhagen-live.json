@@ -9,7 +9,7 @@
   "panels": [
     {
       "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}}, "overrides": []},
       "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
       "id": 1,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
@@ -20,7 +20,7 @@
     },
     {
       "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
       "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
       "id": 2,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
@@ -31,7 +31,7 @@
     },
     {
       "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "light-blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "light-blue", "value": null}]}}, "overrides": []},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "light-blue"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "light-blue", "value": null}]}}, "overrides": []},
       "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
       "id": 3,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
@@ -41,7 +41,7 @@
     },
     {
       "datasource": {"type": "postgres", "uid": "vatsim-postgres"},
-      "fieldConfig": {"defaults": {"color": {"mode": "fixedColor", "fixedColor": "semi-dark-green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "semi-dark-green", "value": null}]}}, "overrides": []},
+      "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "semi-dark-green"}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "semi-dark-green", "value": null}]}}, "overrides": []},
       "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
       "id": 4,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
