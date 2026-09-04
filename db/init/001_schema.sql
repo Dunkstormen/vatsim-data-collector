@@ -76,6 +76,29 @@ CREATE TABLE IF NOT EXISTS atis (
 CREATE INDEX IF NOT EXISTS atis_captured_at_idx ON atis (captured_at DESC);
 CREATE INDEX IF NOT EXISTS atis_callsign_time_idx ON atis (callsign, captured_at DESC);
 
+CREATE TABLE IF NOT EXISTS flight_events (
+    id BIGSERIAL PRIMARY KEY,
+    event_at TIMESTAMPTZ NOT NULL,
+    snapshot_id BIGINT NOT NULL REFERENCES snapshots(id) ON DELETE CASCADE,
+    airport TEXT NOT NULL,
+    event_type TEXT NOT NULL CHECK (event_type IN ('departure', 'arrival')),
+    cid BIGINT NOT NULL,
+    callsign TEXT NOT NULL,
+    logon_time TIMESTAMPTZ NOT NULL,
+    aircraft_short TEXT,
+    origin TEXT,
+    destination TEXT,
+    latitude DOUBLE PRECISION NOT NULL,
+    longitude DOUBLE PRECISION NOT NULL,
+    altitude INTEGER NOT NULL,
+    groundspeed INTEGER NOT NULL,
+    detection JSONB NOT NULL,
+    UNIQUE (airport, event_type, cid, callsign, logon_time)
+);
+
+CREATE INDEX IF NOT EXISTS flight_events_airport_time_idx
+    ON flight_events (airport, event_type, event_at DESC);
+
 CREATE TABLE IF NOT EXISTS collector_events (
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     level TEXT NOT NULL,

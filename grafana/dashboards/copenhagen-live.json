@@ -13,9 +13,9 @@
       "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
       "id": 1,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Departures\" FROM (SELECT DISTINCT cid, callsign, logon_time FROM pilots WHERE departure = 'EKCH' AND $__timeFilter(captured_at)) flights", "refId": "A"}],
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Departures\" FROM flight_events WHERE airport = 'EKCH' AND event_type = 'departure' AND $__timeFilter(event_at)", "refId": "A"}],
       "title": "Accumulated departures",
-      "description": "Distinct EKCH departure flight sessions observed in the selected time range.",
+      "description": "Detected ground-to-airborne transitions at EKCH in the selected time range.",
       "type": "stat"
     },
     {
@@ -24,9 +24,9 @@
       "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
       "id": 2,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Arrivals\" FROM (SELECT DISTINCT cid, callsign, logon_time FROM pilots WHERE arrival = 'EKCH' AND $__timeFilter(captured_at)) flights", "refId": "A"}],
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT count(*) AS \"Arrivals\" FROM flight_events WHERE airport = 'EKCH' AND event_type = 'arrival' AND $__timeFilter(event_at)", "refId": "A"}],
       "title": "Accumulated arrivals",
-      "description": "Distinct EKCH arrival flight sessions observed in the selected time range.",
+      "description": "Detected airborne-to-ground transitions at EKCH in the selected time range.",
       "type": "stat"
     },
     {
@@ -56,10 +56,10 @@
       "id": 5,
       "options": {"legend": {"calcs": ["sum"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
       "targets": [
-        {"editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "WITH flights AS (SELECT min(captured_at) AS first_seen, 'Departures' AS direction FROM pilots WHERE departure = 'EKCH' AND $__timeFilter(captured_at) GROUP BY cid, callsign, logon_time UNION ALL SELECT min(captured_at) AS first_seen, 'Arrivals' AS direction FROM pilots WHERE arrival = 'EKCH' AND $__timeFilter(captured_at) GROUP BY cid, callsign, logon_time) SELECT $__timeGroupAlias(first_seen, $__interval), direction AS metric, count(*)::double precision AS value FROM flights GROUP BY 1, 2 ORDER BY 1", "refId": "A"}
+        {"editorMode": "code", "format": "time_series", "rawQuery": true, "rawSql": "SELECT $__timeGroupAlias(event_at, $__interval), initcap(event_type) AS metric, count(*)::double precision AS value FROM flight_events WHERE airport = 'EKCH' AND $__timeFilter(event_at) GROUP BY 1, 2 ORDER BY 1", "refId": "A"}
       ],
-      "title": "First observed flight sessions",
-      "description": "Distinct flight sessions first observed in each interval within the selected dashboard range.",
+      "title": "Detected movements",
+      "description": "Takeoff and landing state transitions detected in each interval.",
       "type": "timeseries"
     },
     {
@@ -68,7 +68,7 @@
       "gridPos": {"h": 8, "w": 8, "x": 16, "y": 4},
       "id": 6,
       "options": {"barRadius": 0, "barWidth": 0.8, "fullHighlight": false, "groupWidth": 0.7, "legend": {"calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false}, "orientation": "horizontal", "showValue": "always", "stacking": "none", "tooltip": {"mode": "single", "sort": "none"}, "xTickLabelRotation": 0, "xTickLabelSpacing": 0},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(NULLIF(arrival, ''), 'Unknown') AS \"Destination\", count(*) AS \"Flights\" FROM (SELECT DISTINCT cid, callsign, logon_time, arrival FROM pilots WHERE departure = 'EKCH' AND $__timeFilter(captured_at)) flights GROUP BY 1 ORDER BY 2 DESC LIMIT 10", "refId": "A"}],
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(NULLIF(destination, ''), 'Unknown') AS \"Destination\", count(*) AS \"Flights\" FROM flight_events WHERE airport = 'EKCH' AND event_type = 'departure' AND $__timeFilter(event_at) GROUP BY 1 ORDER BY 2 DESC LIMIT 10", "refId": "A"}],
       "title": "Top departure destinations",
       "type": "barchart"
     },

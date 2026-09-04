@@ -1,6 +1,6 @@
 from datetime import timezone
 
-from collector import atis_row, controller_row, parse_timestamp, pilot_row
+from collector import atis_row, controller_row, movement_state, parse_timestamp, pilot_row
 
 
 def test_parse_timestamp_handles_zulu():
@@ -20,3 +20,9 @@ def test_controller_and_atis_rows_accept_minimum_fields():
     now = parse_timestamp("2026-09-04T12:34:56Z")
     assert controller_row(1, now, {"cid": 42, "callsign": "TEST_CTR"})[3] == "TEST_CTR"
     assert atis_row(1, now, {"cid": 42, "callsign": "TEST_ATIS"})[3] == "TEST_ATIS"
+
+
+def test_ekch_movement_states():
+    assert movement_state(55.6181, 12.6561, 25, 12) == "ground"
+    assert movement_state(55.63, 12.70, 1200, 160) == "airborne_near"
+    assert movement_state(56.0, 13.0, 1200, 160) == "other"
