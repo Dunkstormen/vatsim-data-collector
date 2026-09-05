@@ -16,7 +16,7 @@ Every distinct feed update is stored in both forms:
 
 This supports exact replay/export of a historical feed while keeping Grafana and SQL queries efficient. A unique feed timestamp prevents duplicate snapshots if the feed has not refreshed or the collector retries.
 
-The collector also derives EKCH movement events from consecutive pilot observations. A departure is recorded when a filed EKCH departure changes from a conservative ground state at the airport to airborne nearby; an arrival is the inverse transition for a filed EKCH arrival. Events and the thresholds/evidence used to detect them are stored in `flight_events`. VATSIM does not publish an authoritative takeoff/landing flag, so these are auditable position-based inferences.
+The collector also derives EKCH movement events from recent pilot observations within a two-minute lookback. A departure is recorded when a filed EKCH departure changes from a conservative ground state at the airport to airborne nearby; an arrival is the inverse transition for a filed EKCH arrival. Events and the thresholds/evidence used to detect them are stored in `flight_events`. VATSIM does not publish an authoritative takeoff/landing flag, so these are auditable position-based inferences.
 
 ## Start
 

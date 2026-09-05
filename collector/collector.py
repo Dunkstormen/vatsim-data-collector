@@ -8,7 +8,7 @@ import signal
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +41,7 @@ GROUND_ALTITUDE_MARGIN_FT = 300
 GROUND_MAX_SPEED_KT = 60
 AIRBORNE_MIN_ALTITUDE_FT = 450
 AIRBORNE_MIN_SPEED_KT = 80
+MOVEMENT_LOOKBACK_SECONDS = 120
 
 
 def stop(_signum: int, _frame: Any) -> None:
@@ -157,11 +158,21 @@ def detect_movement_events(
         """
         SELECT cid, callsign, logon_time, latitude, longitude, altitude, groundspeed
         FROM pilots
-        WHERE snapshot_id = %s AND (departure = ANY(%s) OR arrival = ANY(%s))
+        WHERE snapshot_id < %s
+          AND captured_at >= %s
+          AND (departure = ANY(%s) OR arrival = ANY(%s))
+        ORDER BY captured_at DESC
         """,
-        (previous_snapshot_id, list(AIRPORTS), list(AIRPORTS)),
+        (
+            snapshot_id,
+            captured_at - timedelta(seconds=MOVEMENT_LOOKBACK_SECONDS),
+            list(AIRPORTS),
+            list(AIRPORTS),
+        ),
     )
-    previous = {(row[0], row[1], row[2]): row[3:] for row in cursor.fetchall()}
+    previous: dict[tuple[Any, ...], list[tuple[Any, ...]]] = {}
+    for row in cursor.fetchall():
+        previous.setdefault((row[0], row[1], row[2]), []).append(row[3:])
     detected = 0
     for item in current_pilots:
         flight_plan = item.get("flight_plan") or {}
@@ -178,15 +189,21 @@ def detect_movement_events(
         if prior is None:
             continue
         for airport in relevant_airports:
-            prior_state = movement_state(airport, prior[0], prior[1], prior[2], prior[3])
             current_state = movement_state(
                 airport, item.get("latitude"), item.get("longitude"), item.get("altitude"), item.get("groundspeed")
             )
             event_type = None
-            if origin == airport and prior_state == "ground" and current_state == "airborne_near":
-                event_type = "departure"
-            elif destination == airport and prior_state == "airborne_near" and current_state == "ground":
-                event_type = "arrival"
+            prior_state = None
+            for observation in prior:
+                candidate_state = movement_state(airport, observation[0], observation[1], observation[2], observation[3])
+                if origin == airport and candidate_state == "ground" and current_state == "airborne_near":
+                    prior_state = candidate_state
+                    event_type = "departure"
+                    break
+                if destination == airport and candidate_state == "airborne_near" and current_state == "ground":
+                    prior_state = candidate_state
+                    event_type = "arrival"
+                    break
             if event_type is None:
                 continue
             radius = distance_nm(airport, item["latitude"], item["longitude"])
@@ -204,7 +221,7 @@ def detect_movement_events(
                     item.get("name"), flight_plan.get("aircraft_short"), origin, destination, item["latitude"],
                     item["longitude"], item["altitude"], item["groundspeed"],
                     Jsonb({
-                        "method": "consecutive_snapshot_state_transition_v1",
+                        "method": "recent_snapshot_state_transition_v2",
                         "previous_state": prior_state,
                         "current_state": current_state,
                         "distance_nm": round(radius, 3),
@@ -216,6 +233,7 @@ def detect_movement_events(
                             "ground_max_speed_kt": GROUND_MAX_SPEED_KT,
                             "airborne_min_altitude_ft": AIRBORNE_MIN_ALTITUDE_FT,
                             "airborne_min_speed_kt": AIRBORNE_MIN_SPEED_KT,
+                            "movement_lookback_seconds": MOVEMENT_LOOKBACK_SECONDS,
                         },
                     }),
                 ),
